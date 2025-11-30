@@ -1,7 +1,7 @@
 """
 End-to-end pipeline:
 
-1. Scrape Google Research blog + TechCrunch AI articles (or load existing CSVs).
+1. Scrape Google Research blog + TechCrunch AI articles
 2. Combine into data/combined_AI_articles.csv
 3. Generate ~150-word English summaries with an LLM.
 4. Translate summaries + titles into German.

@@ -145,9 +145,18 @@ def load_data(csv_path: Path) -> pd.DataFrame:
             else:
                 return "Other"
 
-        df["source"] = df["link"].apply(detect_source)
-    else:
-        df["source"] = df["source"].fillna("Unknown")
+        if "source" not in df.columns:
+            # No column at all → build it from URL
+            df["source"] = df["link"].apply(detect_source)
+        else:
+            # Column exists but may be NaN or empty strings
+            df["source"] = df["source"].fillna("")
+            # If *all* values are empty, recompute from URL
+            if not df["source"].astype(str).str.strip().any():
+                df["source"] = df["link"].apply(detect_source)
+            else:
+                # Otherwise just clean up blanks
+                df["source"] = df["source"].replace("", "Unknown")
 
     # Here I am making sure orig_words / llm_words / compression exists otherwise add it
     if "orig_words" not in df.columns:
