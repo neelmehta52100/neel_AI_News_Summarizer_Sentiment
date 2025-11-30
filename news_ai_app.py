@@ -135,28 +135,29 @@ def load_data(csv_path: Path) -> pd.DataFrame:
             df[col] = ""
 
     # Add source column from URL since missing in our CSV file (Google / TechCrunch / Other)
-    if "source" not in df.columns:
-        def detect_source(link: str) -> str:
-            url = str(link).lower()
-            if "techcrunch" in url:
-                return "TechCrunch"
-            elif "research.google" in url or "google" in url:
-                return "Google Research"
-            else:
-                return "Other"
+    # Add / clean source column (Google / TechCrunch / Other)
+    def detect_source(link: str) -> str:
+        url = str(link).lower()
+        if "techcrunch" in url:
+            return "TechCrunch"
+        elif "research.google" in url or "google" in url:
+            return "Google Research"
+        else:
+            return "Other"
 
-        if "source" not in df.columns:
-            # No column at all → build it from URL
+    if "source" not in df.columns:
+        # No column at all → build it from URL
+        df["source"] = df["link"].apply(detect_source)
+    else:
+        # Column exists but may be NaN or empty strings
+        df["source"] = df["source"].fillna("")
+        # If *all* values are empty/NaN/blank, recompute from URL
+        if not df["source"].astype(str).str.strip().any():
             df["source"] = df["link"].apply(detect_source)
         else:
-            # Column exists but may be NaN or empty strings
-            df["source"] = df["source"].fillna("")
-            # If *all* values are empty, recompute from URL
-            if not df["source"].astype(str).str.strip().any():
-                df["source"] = df["link"].apply(detect_source)
-            else:
-                # Otherwise just clean up blanks
-                df["source"] = df["source"].replace("", "Unknown")
+            # Otherwise just clean up blanks
+            df["source"] = df["source"].replace("", "Unknown")
+
 
     # Here I am making sure orig_words / llm_words / compression exists otherwise add it
     if "orig_words" not in df.columns:
