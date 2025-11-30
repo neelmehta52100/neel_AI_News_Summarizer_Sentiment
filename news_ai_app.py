@@ -126,7 +126,7 @@ def load_data(csv_path: Path) -> pd.DataFrame:
         "summary_llm_150words",
         "summary_llm_german",
         "title",
-        "title_german",        # <--- ensure German title column exists
+        "title_german",       
         "link",
         "sentiment_score",
         "content",

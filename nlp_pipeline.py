@@ -1,12 +1,10 @@
 """
-End-to-end pipeline:
+End-to-end NLP pipeline:
 
-1. Scrape Google Research blog + TechCrunch AI articles
-2. Combine into data/combined_AI_articles.csv
-3. Generate ~150-word English summaries with an LLM.
-4. Translate summaries + titles into German.
-5. Run 3-class sentiment on summaries.
-6. Save final dataset as data/combined_sentiment.csv for news_ai_app.py.
+We start by gathering the latest AI news from Google Research and TechCrunch and combining them into one list. 
+Next, we use an AI model to write short summaries in English and translate them into German. 
+We also check the sentiment of each story to see if it is positive, negative, or neutral. 
+Finally, we save this clean data into a file that our news app can use right away.
 """
 
 import os
@@ -29,9 +27,7 @@ from transformers import (
     MarianTokenizer,
 )
 
-# -------------------------------------------------------------------
-# CONFIG
-# -------------------------------------------------------------------
+# Configuration
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -44,14 +40,12 @@ COMBINED_SENTIMENT_CSV = DATA_DIR / "combined_sentiment.csv"
 MAX_GOOGLE_ARTICLES = 50
 MAX_TC_ARTICLES = 50
 
-# HF models (same as your notebook)
+# Models
 SUMMARIZER_MODEL = "sshleifer/distilbart-cnn-12-6"
 SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 MT_MODEL = "Helsinki-NLP/opus-mt-en-de"
 
-# -------------------------------------------------------------------
 # HELPER: BASIC HTTP FETCH
-# -------------------------------------------------------------------
 
 def fetch_page(url, session=None, sleep_range=(1, 3)):
     """Fetch a URL with a desktop UA + small sleep to be polite."""
@@ -72,9 +66,7 @@ def fetch_page(url, session=None, sleep_range=(1, 3)):
     resp.raise_for_status()
     return resp.text
 
-# -------------------------------------------------------------------
-# SCRAPING: GOOGLE RESEARCH BLOG
-# -------------------------------------------------------------------
+# SCRAPING the GOOGLE RESEARCH BLOG
 
 def is_google_article_url(url: str) -> bool:
     """
@@ -156,9 +148,8 @@ def scrape_google_research_blog(
     print(f"[Google] Saved {len(df)} articles to {output_csv}")
     return df
 
-# -------------------------------------------------------------------
-# SCRAPING: TECHCRUNCH AI TAG
-# -------------------------------------------------------------------
+
+# SCRAPING THE TECHCRUNCH AI TAG
 
 def is_tc_article_url(url: str) -> bool:
     parsed = urlparse(url)
@@ -255,9 +246,7 @@ def scrape_techcrunch_ai_tag(
     print(f"[TC] Saved {len(df)} articles to {output_csv}")
     return df
 
-# -------------------------------------------------------------------
 # COMBINING DATASETS
-# -------------------------------------------------------------------
 
 def load_or_scrape_sources():
     # Google
@@ -289,9 +278,8 @@ def combine_sources(df_google, df_tc):
     print(f"[Combine] Combined {len(combined)} articles -> {COMBINED_AI_CSV}")
     return combined
 
-# -------------------------------------------------------------------
-# LLM SUMMARISATION (≈150 words)
-# -------------------------------------------------------------------
+
+# LLM SUMMARISATION (around 150 words)
 
 def create_summarizer():
     device = 0 if torch.cuda.is_available() else -1
@@ -308,7 +296,6 @@ def summarize_to_150_words(summarizer, text, target_words=150):
         return ""
 
     shortened = text.strip()
-    # (optional) rough char-level cut to avoid super-long texts
     if len(shortened) > 4000:
         shortened = shortened[:4000]
 
@@ -321,7 +308,7 @@ def summarize_to_150_words(summarizer, text, target_words=150):
     )
     summary = result[0]["summary_text"]
 
-    # Optional word-trimming to ~150 words
+    # Word-trimming to around 150 words
     words = summary.split()
     if len(words) > target_words * 1.3:
         summary = " ".join(words[: int(target_words * 1.3)])
@@ -340,9 +327,7 @@ def add_llm_summaries(df):
     df["summary_llm_150words"] = summaries
     return df
 
-# -------------------------------------------------------------------
 # MACHINE TRANSLATION (EN -> DE) FOR SUMMARIES & TITLES
-# -------------------------------------------------------------------
 
 def create_mt_model():
     tokenizer = MarianTokenizer.from_pretrained(MT_MODEL)
@@ -379,7 +364,7 @@ def translate_batch(tokenizer, model, device, text_list, max_length=256):
 def add_german_summaries_and_titles(df):
     tokenizer, model, device = create_mt_model()
 
-    # --- German summaries ---
+    # German summaries
     print("[MT] Translating summaries to German...")
     de_summaries = []
     batch_size = 16
@@ -392,7 +377,7 @@ def add_german_summaries_and_titles(df):
     df["summary_llm_german"] = de_summaries[: len(df)]
     print()
 
-    # --- German titles ---
+    # German titles
     print("[MT] Translating titles to German...")
     if "title_german" not in df.columns:
         df["title_german"] = ""
@@ -417,9 +402,7 @@ def add_german_summaries_and_titles(df):
 
     return df
 
-# -------------------------------------------------------------------
 # SENTIMENT (3-class) ON SUMMARIES
-# -------------------------------------------------------------------
 
 def create_sentiment_pipeline():
     tokenizer = AutoTokenizer.from_pretrained(SENTIMENT_MODEL)
@@ -454,9 +437,7 @@ def add_three_class_sentiment(df):
     print()
     return df
 
-# -------------------------------------------------------------------
 # MAIN PIPELINE
-# -------------------------------------------------------------------
 
 def main():
     print("=== AI News Pipeline: START ===")
