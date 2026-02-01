@@ -285,7 +285,7 @@ def create_summarizer():
     device = 0 if torch.cuda.is_available() else -1
     print(f"[Summarizer] Using device: {'GPU' if device == 0 else 'CPU'}")
     return pipeline(
-        "summarization",
+        "text2text-generation",
         model=SUMMARIZER_MODEL,
         tokenizer=SUMMARIZER_MODEL,
         device=device,
