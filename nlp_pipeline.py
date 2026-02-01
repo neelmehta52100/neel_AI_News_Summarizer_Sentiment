@@ -284,8 +284,9 @@ def combine_sources(df_google, df_tc):
 def create_summarizer():
     device = 0 if torch.cuda.is_available() else -1
     print(f"[Summarizer] Using device: {'GPU' if device == 0 else 'CPU'}")
+
     return pipeline(
-        "text2text-generation",
+        "text-generation",
         model=SUMMARIZER_MODEL,
         tokenizer=SUMMARIZER_MODEL,
         device=device,
@@ -306,7 +307,7 @@ def summarize_to_150_words(summarizer, text, target_words=150):
         do_sample=False,
         truncation=True, 
     )
-    summary = result[0]["summary_text"]
+    summary = result[0]["generated_text"]
 
     # Word-trimming to around 150 words
     words = summary.split()
